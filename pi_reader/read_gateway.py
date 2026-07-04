@@ -9,7 +9,12 @@ CSV log. If the gateway is unplugged it waits and reconnects automatically.
 Gateway line formats (see gateway_node.ino):
     node=3,type=1,door=OPEN                 # known type (door)
     node=9,type=4,v1=21.50,v2=48.00         # unknown type -> raw values
+    node=0,type=99,uptime=42,radio=ok       # gateway liveness ping (every 5s)
     # comment / status lines start with '#' and are ignored for logging
+
+The ping (type 99) is treated as a link-alive signal, not a sensor reading:
+it is not written to the CSV. If no ping arrives for LINK_TIMEOUT seconds the
+reader prints a warning that the gateway link may be down.
 
 Setup on the Pi:
     sudo apt install python3-serial        # or: pip3 install pyserial
@@ -32,6 +37,11 @@ try:
     import serial  # pyserial
 except ImportError:
     sys.exit("pyserial not installed. Run: pip3 install pyserial")
+
+# Gateway ping (see gateway_node.ino): node 0, type 99, every ~5s.
+PING_TYPE = 99
+# Warn if no ping for this long (a couple missed pings = link/gateway problem).
+LINK_TIMEOUT = 12.0
 
 
 # ---------- parsing ----------
@@ -57,11 +67,12 @@ def parse_line(line):
         return None  # not a reading we recognize
 
     # Coerce known numeric fields where present.
-    for key in ("node", "type"):
-        try:
-            fields[key] = int(fields[key])
-        except ValueError:
-            pass
+    for key in ("node", "type", "uptime"):
+        if key in fields:
+            try:
+                fields[key] = int(fields[key])
+            except ValueError:
+                pass
     for key in ("v1", "v2"):
         if key in fields:
             try:
@@ -132,6 +143,9 @@ def main():
     print("Reading gateway. Ctrl-C to stop.")
     ser = open_serial(args.port, args.baud)
 
+    last_ping = time.monotonic()   # updated on every gateway ping
+    link_down = False              # so we warn/recover only on transitions
+
     try:
         while True:
             try:
@@ -143,13 +157,35 @@ def main():
                 except Exception:
                     pass
                 ser = open_serial(args.port, args.baud)
+                last_ping = time.monotonic()
+                link_down = False
                 continue
 
             reading = parse_line(raw)
+
+            # --- link watchdog (runs ~1x/sec thanks to the read timeout) ---
+            now = time.monotonic()
+            if now - last_ping > LINK_TIMEOUT and not link_down:
+                link_down = True
+                print(f"[warning] no gateway ping for {LINK_TIMEOUT:.0f}s "
+                      "-- serial link may be down")
+
             if reading is None:
                 stripped = raw.strip()
                 if stripped.startswith("#") and not args.quiet:
                     print(f"[gateway] {stripped}")
+                continue
+
+            # --- gateway liveness ping: track it, but don't log as a reading ---
+            if reading.get("type") == PING_TYPE:
+                last_ping = now
+                if link_down:
+                    link_down = False
+                    print("[recovered] gateway ping resumed")
+                if not args.quiet:
+                    radio = reading.get("radio", "?")
+                    up = reading.get("uptime", "?")
+                    print(f"[alive] gateway up={up}s radio={radio}")
                 continue
 
             reading["timestamp"] = datetime.now(timezone.utc).isoformat()

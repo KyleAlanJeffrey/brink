@@ -45,7 +45,15 @@ struct Packet {
 // msgType registry (grow this as you add node types)
 const uint8_t MSGTYPE_DOOR = 1;
 
+// Gateway -> Pi liveness ping. Not a radio packet; it identifies the gateway
+// itself (node 0) so the Pi knows the serial link is alive during radio silence.
+const uint8_t      GW_NODE_ID   = 0;
+const uint8_t      MSGTYPE_PING = 99;
+const unsigned long PING_MS     = 5000;   // every 5 seconds
+
 RF24 radio(RADIO_CE_PIN, RADIO_CSN_PIN);
+
+unsigned long lastPing = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -71,6 +79,16 @@ void loop() {
     Packet p;
     radio.read(&p, sizeof(p));
     forwardToPi(p);
+  }
+
+  // Liveness ping to the Pi every PING_MS, e.g.:
+  //   node=0,type=99,uptime=42,radio=ok
+  if (millis() - lastPing >= PING_MS) {
+    lastPing = millis();
+    Serial.print(F("node="));    Serial.print(GW_NODE_ID);
+    Serial.print(F(",type="));   Serial.print(MSGTYPE_PING);
+    Serial.print(F(",uptime=")); Serial.print(millis() / 1000);
+    Serial.print(F(",radio="));  Serial.println(radio.isChipConnected() ? F("ok") : F("down"));
   }
 }
 

@@ -73,6 +73,16 @@ node=3,type=1,door=OPEN
 Unrecognized message types fall back to raw values (`node=9,type=4,v1=21.50,v2=48.00`)
 so nothing is ever lost.
 
+The gateway also emits a **liveness ping every 5 seconds** so the Pi knows the serial
+link is alive even during radio silence:
+
+```
+node=0,type=99,uptime=42,radio=ok
+```
+
+The Pi reader treats the ping as a link-alive signal (not a sensor reading, so it is
+not logged to CSV) and prints a warning if no ping arrives for ~12 seconds.
+
 ## Files
 
 | File | Description |
