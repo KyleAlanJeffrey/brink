@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 500" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#5b6472"/>
+    </marker>
+  </defs>
+
+  <!-- card background -->
+  <rect x="0" y="0" width="1040" height="500" rx="16" fill="#f7f8fa" stroke="#e2e5ea"/>
+
+  <!-- title -->
+  <text x="32" y="42" font-size="22" font-weight="700" fill="#1f2937">RF-Nano Sensor Network — Gateway Wiring &amp; Data Path</text>
+  <text x="32" y="66" font-size="13.5" fill="#6b7280">Remote node transmits by radio · gateway RF-Nano bridges radio to the Pi over a single USB cable (no GPIO wiring)</text>
+
+  <!-- ===================== REED SWITCH ===================== -->
+  <g>
+    <rect x="30" y="205" width="86" height="70" rx="8" fill="#ffffff" stroke="#c3c9d2"/>
+    <text x="73" y="197" font-size="12" font-weight="600" fill="#374151" text-anchor="middle">Reed switch</text>
+    <text x="73" y="255" font-size="10.5" fill="#6b7280" text-anchor="middle">NC (Node 3)</text>
+    <!-- switch symbol -->
+    <circle cx="52" cy="228" r="3.5" fill="#374151"/>
+    <circle cx="94" cy="228" r="3.5" fill="#374151"/>
+    <line x1="52" y1="228" x2="88" y2="220" stroke="#374151" stroke-width="2"/>
+    <!-- magnet -->
+    <rect x="46" y="238" width="54" height="10" rx="2" fill="#ef4444"/>
+    <text x="73" y="246.5" font-size="7.5" fill="#fff" text-anchor="middle" font-weight="700">MAGNET</text>
+  </g>
+
+  <!-- reed wires to node -->
+  <path d="M116,222 H150 Q160,222 160,232 V236" fill="none" stroke="#ea8a2b" stroke-width="3"/>
+  <path d="M116,258 H140 Q160,258 160,268 V300" fill="none" stroke="#2b2f36" stroke-width="3"/>
+  <text x="132" y="216" font-size="10" fill="#ea8a2b" font-weight="600">signal</text>
+  <text x="130" y="290" font-size="10" fill="#2b2f36" font-weight="600">gnd</text>
+
+  <!-- ===================== NODE RF-NANO ===================== -->
+  <g>
+    <rect x="170" y="120" width="200" height="210" rx="10" fill="#123b53" stroke="#0c2b3d"/>
+    <text x="270" y="146" font-size="15" font-weight="700" fill="#e8eef2" text-anchor="middle">RF-Nano — Node 3</text>
+    <text x="270" y="164" font-size="10.5" fill="#9fb6c4" text-anchor="middle">ATmega328P · door sensor</text>
+
+    <!-- left pin header w/ labels -->
+    <rect x="164" y="232" width="10" height="8" fill="#e0b34d"/>
+    <text x="182" y="240" font-size="11" fill="#e8eef2" font-weight="600">D2</text>
+    <rect x="164" y="296" width="10" height="8" fill="#e0b34d"/>
+    <text x="182" y="304" font-size="11" fill="#e8eef2" font-weight="600">GND</text>
+
+    <!-- on-board radio -->
+    <rect x="214" y="190" width="112" height="60" rx="6" fill="#0a2233" stroke="#1c86b8"/>
+    <text x="270" y="214" font-size="11" font-weight="600" fill="#7fd3f0" text-anchor="middle">nRF24L01+</text>
+    <text x="270" y="230" font-size="9" fill="#9fb6c4" text-anchor="middle">on-board · CE10 CSN9</text>
+    <!-- antenna -->
+    <polyline points="326,205 340,199 326,213 340,207 326,221" fill="none" stroke="#7fd3f0" stroke-width="2"/>
+    <text x="345" y="192" font-size="10" fill="#0c2b3d" font-weight="600">2.4 GHz</text>
+  </g>
+
+  <!-- ===================== RADIO HOP ===================== -->
+  <path d="M352,205 C430,150 470,150 548,205" fill="none" stroke="#7c3aed" stroke-width="3" stroke-dasharray="7 6" marker-end="url(#arrowPurple)"/>
+  <rect x="392" y="118" width="176" height="42" rx="8" fill="#f2edfc" stroke="#c9b6f0"/>
+  <text x="480" y="135" font-size="10.5" font-weight="700" fill="#5b21b6" text-anchor="middle">RADIO (wireless)</text>
+  <text x="480" y="150" font-size="9.5" fill="#6d28d9" text-anchor="middle">ch 76 · addr GWAY1 · 1 Mbps · ≤32 B</text>
+
+  <!-- ===================== GATEWAY RF-NANO ===================== -->
+  <g>
+    <rect x="548" y="150" width="190" height="170" rx="10" fill="#123b53" stroke="#0c2b3d"/>
+    <text x="643" y="176" font-size="15" font-weight="700" fill="#e8eef2" text-anchor="middle">RF-Nano — Gateway</text>
+    <text x="643" y="194" font-size="10.5" fill="#9fb6c4" text-anchor="middle">receives · forwards to Pi</text>
+
+    <!-- on-board radio -->
+    <rect x="560" y="210" width="104" height="56" rx="6" fill="#0a2233" stroke="#1c86b8"/>
+    <text x="612" y="232" font-size="10.5" font-weight="600" fill="#7fd3f0" text-anchor="middle">nRF24L01+</text>
+    <text x="612" y="247" font-size="8.5" fill="#9fb6c4" text-anchor="middle">CE10 CSN9</text>
+    <!-- antenna (facing node) -->
+    <polyline points="558,205 544,199 558,213 544,207 558,221" fill="none" stroke="#7fd3f0" stroke-width="2"/>
+
+    <!-- micro-USB port on right edge -->
+    <rect x="732" y="228" width="16" height="26" rx="3" fill="#c9ccd2" stroke="#8b909a"/>
+    <text x="700" y="292" font-size="10" fill="#e8eef2" text-anchor="middle">micro-USB</text>
+  </g>
+
+  <!-- ===================== USB CABLE ===================== -->
+  <path d="M748,241 H832" fill="none" stroke="#5b6472" stroke-width="6" marker-end="url(#arrowGray)"/>
+  <text x="794" y="212" font-size="10.5" font-weight="700" fill="#374151" text-anchor="middle">USB cable</text>
+  <text x="794" y="226" font-size="9" fill="#6b7280" text-anchor="middle">data + 5V</text>
+
+  <!-- ===================== RASPBERRY PI ===================== -->
+  <g>
+    <rect x="840" y="150" width="172" height="170" rx="10" fill="#1b5e20" stroke="#123f16"/>
+    <text x="926" y="176" font-size="15" font-weight="700" fill="#eafbe9" text-anchor="middle">Raspberry Pi</text>
+    <text x="926" y="194" font-size="10.5" fill="#b8dcb6" text-anchor="middle">reads the serial port</text>
+    <!-- USB-A port -->
+    <rect x="836" y="230" width="18" height="24" rx="2" fill="#c9ccd2" stroke="#8b909a"/>
+    <text x="900" y="248" font-size="10" fill="#eafbe9" text-anchor="middle">USB-A</text>
+    <!-- terminal chip -->
+    <rect x="858" y="266" width="136" height="40" rx="6" fill="#0e3712" stroke="#2f7a34"/>
+    <text x="926" y="283" font-size="10" fill="#9fe39c" text-anchor="middle" font-family="monospace">/dev/ttyUSB0</text>
+    <text x="926" y="298" font-size="10" fill="#9fe39c" text-anchor="middle" font-family="monospace">115200 baud</text>
+  </g>
+
+  <!-- ===================== FOOTER NOTE ===================== -->
+  <rect x="32" y="392" width="976" height="82" rx="10" fill="#ffffff" stroke="#e2e5ea"/>
+  <text x="48" y="416" font-size="12.5" font-weight="700" fill="#1f2937">What the Pi receives (one line per packet):</text>
+  <text x="48" y="440" font-size="12.5" fill="#374151" font-family="monospace">node=3,type=1,door=OPEN</text>
+  <text x="48" y="462" font-size="11" fill="#6b7280">Gateway wiring is just the USB cable — the nRF24L01 radio is already on the board. Match channel, address, data rate &amp; struct across all nodes.</text>
+</svg>
