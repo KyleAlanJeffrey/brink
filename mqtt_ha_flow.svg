@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 560" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+  <rect x="0" y="0" width="1060" height="560" rx="16" fill="#f7f8fa" stroke="#e2e5ea"/>
+
+  <text x="32" y="42" font-size="22" font-weight="700" fill="#1f2937">Home Assistant Integration — MQTT Flow</text>
+  <text x="32" y="66" font-size="13.5" fill="#6b7280">Pi bridge publishes to the broker; Home Assistant auto-discovers the door and tracks availability from two topics</text>
+
+  <!-- ===================== PI BRIDGE ===================== -->
+  <rect x="32" y="150" width="230" height="150" rx="10" fill="#1b5e20" stroke="#123f16"/>
+  <text x="147" y="182" font-size="15" font-weight="700" fill="#eafbe9" text-anchor="middle">Raspberry Pi</text>
+  <text x="147" y="204" font-size="11" fill="#b8dcb6" text-anchor="middle">mqtt_bridge.py</text>
+  <rect x="56" y="222" width="182" height="30" rx="5" fill="#0e3712" stroke="#2f7a34"/>
+  <text x="147" y="242" font-size="10.5" fill="#9fe39c" text-anchor="middle">systemd: rfnano-bridge</text>
+  <text x="147" y="274" font-size="10" fill="#b8dcb6" text-anchor="middle">reads serial, publishes MQTT</text>
+
+  <!-- Pi -> broker arrow -->
+  <line x1="262" y1="225" x2="392" y2="225" stroke="#5b6472" stroke-width="4"/>
+  <polygon points="392,225 380,219 380,231" fill="#5b6472"/>
+  <text x="327" y="216" font-size="10.5" font-weight="700" fill="#374151" text-anchor="middle">publish</text>
+
+  <!-- ===================== BROKER + TOPICS ===================== -->
+  <rect x="400" y="96" width="300" height="368" rx="10" fill="#123b53" stroke="#0c2b3d"/>
+  <text x="550" y="124" font-size="15" font-weight="700" fill="#e8eef2" text-anchor="middle">MQTT broker (Mosquitto)</text>
+  <text x="550" y="143" font-size="10.5" fill="#9fb6c4" text-anchor="middle">topics</text>
+
+  <!-- topic rows -->
+  <g font-family="monospace">
+    <rect x="416" y="156" width="268" height="46" rx="6" fill="#0a2233" stroke="#1c86b8"/>
+    <text x="428" y="174" font-size="10.5" fill="#7fd3f0">door/state</text>
+    <text x="428" y="190" font-size="9" fill="#9fb6c4">OPEN / CLOSED (retained)</text>
+
+    <rect x="416" y="210" width="268" height="46" rx="6" fill="#0a2233" stroke="#1c86b8"/>
+    <text x="428" y="228" font-size="10.5" fill="#7fd3f0">bridge/status</text>
+    <text x="428" y="244" font-size="9" fill="#9fb6c4">online / offline (MQTT Last Will)</text>
+
+    <rect x="416" y="264" width="268" height="46" rx="6" fill="#0a2233" stroke="#1c86b8"/>
+    <text x="428" y="282" font-size="10.5" fill="#7fd3f0">gateway/status</text>
+    <text x="428" y="298" font-size="9" fill="#9fb6c4">online / offline (5s ping watchdog)</text>
+
+    <rect x="416" y="318" width="268" height="46" rx="6" fill="#0a2233" stroke="#1c86b8"/>
+    <text x="428" y="336" font-size="10.5" fill="#7fd3f0">bridge/log</text>
+    <text x="428" y="352" font-size="9" fill="#9fb6c4">raw serial lines (last retained)</text>
+
+    <rect x="416" y="372" width="268" height="46" rx="6" fill="#1e2b3a" stroke="#e0b34d"/>
+    <text x="428" y="390" font-size="9.5" fill="#f0d488">homeassistant/binary_sensor/</text>
+    <text x="428" y="405" font-size="9.5" fill="#f0d488">door/config  (discovery)</text>
+  </g>
+
+  <!-- broker -> HA arrow -->
+  <line x1="700" y1="225" x2="792" y2="225" stroke="#5b6472" stroke-width="4"/>
+  <polygon points="792,225 780,219 780,231" fill="#5b6472"/>
+  <text x="746" y="216" font-size="10" font-weight="700" fill="#374151" text-anchor="middle">subscribe</text>
+
+  <!-- ===================== HOME ASSISTANT ===================== -->
+  <rect x="800" y="150" width="228" height="200" rx="10" fill="#0b2e4a" stroke="#062033"/>
+  <text x="914" y="182" font-size="15" font-weight="700" fill="#cfe8ff" text-anchor="middle">Home Assistant</text>
+  <text x="914" y="201" font-size="10.5" fill="#8fb8d8" text-anchor="middle">MQTT integration</text>
+
+  <rect x="820" y="216" width="188" height="52" rx="6" fill="#103a5c" stroke="#3f8fc4"/>
+  <text x="914" y="236" font-size="11" font-weight="700" fill="#eaf4ff" text-anchor="middle">binary_sensor: Door</text>
+  <text x="914" y="252" font-size="9.5" fill="#a9cbe6" text-anchor="middle">device_class: door</text>
+
+  <text x="914" y="290" font-size="9.5" fill="#8fb8d8" text-anchor="middle">available only if BOTH:</text>
+  <text x="914" y="306" font-size="9.5" fill="#cfe8ff" text-anchor="middle">bridge=online AND gateway=online</text>
+  <text x="914" y="322" font-size="9" fill="#8fb8d8" text-anchor="middle">(availability_mode: all)</text>
+
+  <!-- ===================== FOOTER ===================== -->
+  <rect x="32" y="486" width="996" height="52" rx="10" fill="#ffffff" stroke="#e2e5ea"/>
+  <text x="48" y="508" font-size="11.5" font-weight="700" fill="#1f2937">Auto-discovery:</text>
+  <text x="168" y="508" font-size="11" fill="#374151">HA reads the retained config topic and creates the door entity itself — no YAML editing.</text>
+  <text x="48" y="527" font-size="10.5" fill="#6b7280">The door shows "unavailable" if the Pi/broker link drops (Last Will) or the RF-Nano gateway goes quiet (ping watchdog).</text>
+</svg>

@@ -88,10 +88,64 @@ not logged to CSV) and prints a warning if no ping arrives for ~12 seconds.
 | File | Description |
 |------|-------------|
 | `door_node/door_node.ino` | Node 3 firmware — reads the reed switch, transmits on change + 5-min heartbeat. `DEBUG_TICK` prints state once/sec for bench testing. |
-| `gateway_node/gateway_node.ino` | Gateway firmware — receives radio packets, forwards them to the Pi over serial. |
+| `gateway_node/gateway_node.ino` | Gateway firmware — receives radio packets, forwards them to the Pi over serial, pings every 5s. |
+| `pi_reader/read_gateway.py` | Pi console reader — prints readings, logs to CSV, warns if the gateway link goes quiet. |
+| `pi_reader/mqtt_bridge.py` | Home Assistant MQTT bridge — publishes state + auto-discovery so the door appears in HA. |
 | `gateway_wiring.svg` | Pictorial wiring / data-path diagram (node → radio → gateway → USB → Pi). |
 
 A matching diagram also lives on the FigJam board **RF-Nano sensor network**.
+
+## Home Assistant (MQTT auto-discovery)
+
+`pi_reader/mqtt_bridge.py` publishes to an MQTT broker using HA's MQTT Discovery,
+so the door shows up automatically as a `binary_sensor` with the `door` device
+class — no YAML editing in Home Assistant. It requires the HA MQTT integration and
+a broker (e.g. the Mosquitto add-on).
+
+```bash
+pip3 install pyserial paho-mqtt
+python3 pi_reader/mqtt_bridge.py --mqtt-host 192.168.1.10 \
+    --mqtt-user USER --mqtt-pass PASS
+```
+
+Topics:
+
+| Topic | Purpose |
+|-------|---------|
+| `door/state` | `OPEN` / `CLOSED` (retained) |
+| `bridge/status` | bridge alive — MQTT Last Will (this script / Pi / broker) |
+| `gateway/status` | gateway alive — driven by the 5s ping watchdog |
+| `bridge/log` | raw serial lines, for live viewing (last line retained) |
+| `homeassistant/binary_sensor/door/config` | discovery config (retained) |
+
+Availability is layered with `availability_mode: all` — HA shows the door as
+**unavailable** if *either* the bridge dies (Last Will) *or* the gateway link goes
+quiet (no ping for ~12s). Otherwise it reports open/closed in real time.
+
+Use `read_gateway.py` for plain console/CSV logging, or `mqtt_bridge.py` for HA —
+run whichever you need (or both, on different `--csv`/broker targets).
+
+Watch the raw gateway output over MQTT from any machine:
+
+```bash
+mosquitto_sub -h <broker-ip> -t 'bridge/log' -v
+```
+
+### Run the bridge as a service
+
+`pi_reader/service/install_service.sh` installs `mqtt_bridge.py` as a systemd
+service that starts on boot and restarts on crash:
+
+```bash
+cd pi_reader/service
+sudo bash install_service.sh
+sudo nano /etc/rfnano-bridge.env     # enter your broker details
+sudo systemctl start rfnano-bridge
+journalctl -u rfnano-bridge -f       # watch service logs
+```
+
+Broker settings live in `/etc/rfnano-bridge.env` (root-only, mode 600), so no
+credentials are stored in the unit file or the repo.
 
 ## Flashing & testing
 

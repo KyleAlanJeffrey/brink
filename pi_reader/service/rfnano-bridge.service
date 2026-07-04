@@ -1,0 +1,19 @@
+[Unit]
+Description=RF-Nano to Home Assistant MQTT bridge
+Documentation=file://@DIR@/../README.md
+After=network-online.target
+Wants=network-online.target
+# Restart forever without hitting the default start-rate limit.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=@USER@
+EnvironmentFile=/etc/rfnano-bridge.env
+ExecStart=/usr/bin/python3 @DIR@/mqtt_bridge.py
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
