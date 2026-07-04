@@ -137,20 +137,28 @@ mosquitto_sub -h <broker-ip> -t 'bridge/log' -v
 
 ### Run the bridge as a service
 
-`pi/service/install_service.sh` builds the virtualenv and installs the bridge as a
-systemd service that starts on boot and restarts on crash. The unit runs
-`pi/venv/bin/python -m mqtt_hub` with `WorkingDirectory=pi`:
+`pi/service/install_service.sh` builds the virtualenv, sets up a local Mosquitto
+broker on the Pi, and installs the bridge as a systemd service that starts on
+boot and restarts on crash. The unit runs `pi/venv/bin/python -m mqtt_hub` with
+`WorkingDirectory=pi`:
 
 ```bash
 cd pi/service
-sudo bash install_service.sh         # creates venv, wires up the unit, enables it
-sudo nano /etc/rfnano-bridge.env     # enter your broker details
+sudo bash install_service.sh         # venv + broker + service, all wired up
 sudo systemctl start rfnano-bridge
 journalctl -u rfnano-bridge -f       # watch service logs
 ```
 
-Broker settings live in `/etc/rfnano-bridge.env` (root-only, mode 600), so no
-credentials are stored in the unit file or the repo.
+By default the Pi *is* the broker: `mosquitto/local.conf` is installed to
+`/etc/mosquitto/conf.d/local.conf`, making it listen on `0.0.0.0:1883` (anonymous)
+so a separate Home Assistant box can connect at the **Pi's LAN IP**. The bridge
+connects to `localhost`. Pass `--no-broker` to skip broker setup if your broker
+lives elsewhere, and set `MQTT_HOST`/`MQTT_USER`/`MQTT_PASS` in
+`/etc/rfnano-bridge.env` (root-only, mode 600) accordingly.
+
+For anything beyond testing, replace `allow_anonymous true` in `local.conf` with a
+password file (see the comments in that file), and add the same credentials to the
+env file.
 
 ## Flashing & testing
 

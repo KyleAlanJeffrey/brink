@@ -3,11 +3,20 @@
 # Install the RF-Nano -> Home Assistant MQTT bridge as a systemd service.
 # Run with sudo:   sudo bash install_service.sh
 #
+# By default this also sets up a local Mosquitto broker on the Pi (reachable on
+# the LAN so a separate Home Assistant box can connect). Skip that with:
+#   sudo bash install_service.sh --no-broker
+#
 set -euo pipefail
 
 SERVICE="rfnano-bridge"
 UNIT="/etc/systemd/system/${SERVICE}.service"
 ENVFILE="/etc/${SERVICE}.env"
+
+SETUP_BROKER=1
+for arg in "$@"; do
+  [[ "${arg}" == "--no-broker" ]] && SETUP_BROKER=0
+done
 
 if [[ $EUID -ne 0 ]]; then
   echo "Please run as root:  sudo bash install_service.sh" >&2
@@ -29,11 +38,27 @@ echo "  project dir : ${PROJECT_DIR}"
 echo "==> Creating virtualenv + installing requirements"
 sudo -u "${RUN_USER}" bash "${PROJECT_DIR}/install_venv.sh"
 
-# 2. Serial port access for the run user.
+# 2. Local MQTT broker (Pi-as-broker). Skip with --no-broker.
+if [[ "${SETUP_BROKER}" -eq 1 ]]; then
+  echo "==> Setting up local Mosquitto broker"
+  if ! command -v mosquitto >/dev/null 2>&1; then
+    apt-get update -qq
+    apt-get install -y mosquitto mosquitto-clients >/dev/null
+  fi
+  install -m 644 "${PROJECT_DIR}/mosquitto/local.conf" \
+      /etc/mosquitto/conf.d/local.conf
+  systemctl enable --now mosquitto
+  systemctl restart mosquitto
+  echo "    broker listening on 0.0.0.0:1883 (anonymous; see local.conf to add auth)"
+else
+  echo "==> Skipping broker setup (--no-broker)"
+fi
+
+# 3. Serial port access for the run user.
 echo "==> Adding ${RUN_USER} to the 'dialout' group (serial access)"
 usermod -aG dialout "${RUN_USER}" || true
 
-# 3. Environment file with broker details (never overwrite an existing one).
+# 4. Environment file with broker details (never overwrite an existing one).
 if [[ -f "${ENVFILE}" ]]; then
   echo "==> ${ENVFILE} already exists, leaving it untouched"
 else
@@ -41,12 +66,12 @@ else
   install -m 600 "${HERE}/rfnano-bridge.env.example" "${ENVFILE}"
 fi
 
-# 4. Render the unit file with the real user + path.
+# 5. Render the unit file with the real user + path.
 echo "==> Writing ${UNIT}"
 sed -e "s|@USER@|${RUN_USER}|g" -e "s|@DIR@|${PROJECT_DIR}|g" \
     "${HERE}/rfnano-bridge.service" > "${UNIT}"
 
-# 5. Enable (but don't start until the env file is filled in).
+# 6. Enable (but don't start until the env file is filled in).
 echo "==> Enabling service"
 systemctl daemon-reload
 systemctl enable "${SERVICE}" >/dev/null
