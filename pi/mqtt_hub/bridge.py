@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-"""
-Home Assistant MQTT bridge for the RF-Nano gateway.
+"""Home Assistant MQTT bridge for the RF-Nano gateway.
 
 Reads the gateway RF-Nano over USB serial and publishes to an MQTT broker so
 Home Assistant discovers the sensors automatically (MQTT Discovery). No YAML
@@ -15,17 +13,13 @@ HA marks the door available only when BOTH are online (availability_mode: all).
 Every raw serial line is also republished to bridge/log (last line retained)
 so you can watch the gateway output live in any MQTT client.
 
-Setup on the Pi:
-    pip3 install pyserial paho-mqtt
-    python3 mqtt_bridge.py --mqtt-host 192.168.1.10 \
-        --mqtt-user USER --mqtt-pass PASS
-    # serial port auto-detects; override with --port /dev/ttyUSB0
-
-Requires read_gateway.py in the same folder (shared line parser).
+Run with:   python -m mqtt_hub
+Configuration comes from CLI flags or environment variables (see main()).
 """
 
 import argparse
 import json
+import logging
 import os
 import sys
 import time
@@ -33,13 +27,15 @@ import time
 try:
     import paho.mqtt.client as mqtt
 except ImportError:
-    sys.exit("paho-mqtt not installed. Run: pip3 install paho-mqtt")
+    sys.exit("paho-mqtt not installed. Install it (see requirements.txt): pip install paho-mqtt")
 
-# Reuse the tested serial parser + constants from the reader.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from read_gateway import parse_line, open_serial, PING_TYPE, LINK_TIMEOUT  # noqa: E402
+import serial  # pyserial (validated in serial_io)
 
-import serial  # noqa: E402  (pyserial; read_gateway already validated it)
+from .serial_io import parse_line, open_serial, PING_TYPE, LINK_TIMEOUT
+
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("mqtt_hub")
 
 # ---------- topic layout ----------
 BRIDGE_STATUS = "bridge/status"      # MQTT LWT: online/offline
@@ -91,11 +87,11 @@ def make_client(args):
     client.will_set(BRIDGE_STATUS, "offline", qos=1, retain=True)
 
     def on_connect(cl, userdata, *rest):  # *rest absorbs 1.x/2.x signature diff
-        print("[mqtt] connected")
+        logger.info("[mqtt] connected")
         cl.publish(BRIDGE_STATUS, "online", qos=1, retain=True)
         for topic, payload in discovery_configs(args.discovery_prefix):
             cl.publish(topic, json.dumps(payload), qos=1, retain=True)
-        print("[mqtt] discovery published")
+        logger.info("[mqtt] discovery published")
 
     client.on_connect = on_connect
     return client
@@ -115,6 +111,8 @@ def main():
     ap.add_argument("--baud", type=int, default=int(os.environ.get("BAUD", "115200")))
     args = ap.parse_args()
 
+    logger.info(f"[mqtt] connecting to {args.mqtt_host}:{args.mqtt_port}...")
+
     client = make_client(args)
     client.connect(args.mqtt_host, args.mqtt_port, keepalive=30)
     client.loop_start()  # background network thread handles reconnects
@@ -129,14 +127,14 @@ def main():
             gateway_online = online
             client.publish(GATEWAY_STATUS, "online" if online else "offline",
                            qos=1, retain=True)
-            print(f"[gateway] {'online' if online else 'offline'}")
+            logger.info(f"[gateway] {'online' if online else 'offline'}")
 
     try:
         while True:
             try:
                 raw = ser.readline().decode("utf-8", errors="replace")
             except serial.SerialException:
-                print("[serial] disconnected, reopening...")
+                logger.warning("[serial] disconnected, reopening...")
                 set_gateway(False)
                 try:
                     ser.close()
@@ -147,7 +145,7 @@ def main():
                 continue
 
             # Republish the raw serial line so it can be watched over MQTT
-            # (subscribe to rfnano/bridge/log). Retain the last line so a new
+            # (subscribe to bridge/log). Retain the last line so a new
             # subscriber immediately sees the most recent output.
             line = raw.strip()
             if line:
@@ -169,9 +167,9 @@ def main():
             # Door state -> retained so HA restores it after a restart.
             if reading.get("node") == 3 and "door" in reading:
                 client.publish(DOOR_STATE, reading["door"], qos=1, retain=True)
-                print(f"[door] {reading['door']}")
+                logger.info(f"[door] {reading['door']}")
     except KeyboardInterrupt:
-        print("\nStopping.")
+        logger.info("stopping")
     finally:
         client.publish(BRIDGE_STATUS, "offline", qos=1, retain=True)
         client.loop_stop()

@@ -9,8 +9,10 @@ StartLimitIntervalSec=0
 [Service]
 Type=simple
 User=@USER@
+WorkingDirectory=@DIR@
 EnvironmentFile=/etc/rfnano-bridge.env
-ExecStart=/usr/bin/python3 @DIR@/mqtt_bridge.py
+# Run the package from the project's virtualenv.
+ExecStart=@DIR@/venv/bin/python -m mqtt_hub
 Restart=always
 RestartSec=5
 NoNewPrivileges=true

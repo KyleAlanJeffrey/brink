@@ -17,22 +17,17 @@ fi
 # User that will own/run the service (the human who ran sudo, not root).
 RUN_USER="${SUDO_USER:-$(logname 2>/dev/null || echo pi)}"
 
-# service/ dir is this script's dir; the Python scripts live one level up.
+# service/ dir is this script's dir; the package + venv live one level up (pi/).
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SCRIPT_DIR="$(cd "${HERE}/.." && pwd)"
+PROJECT_DIR="$(cd "${HERE}/.." && pwd)"
 
 echo "Installing '${SERVICE}'"
 echo "  run as user : ${RUN_USER}"
-echo "  scripts in  : ${SCRIPT_DIR}"
+echo "  project dir : ${PROJECT_DIR}"
 
-# 1. Python dependencies (prefer distro packages; fall back to pip).
-echo "==> Installing Python dependencies"
-if apt-get update -qq && apt-get install -y python3-serial python3-paho-mqtt >/dev/null 2>&1; then
-  echo "    installed via apt"
-else
-  echo "    apt packages unavailable, using pip"
-  python3 -m pip install --break-system-packages pyserial paho-mqtt
-fi
+# 1. Virtualenv (created as the run user so it owns the files).
+echo "==> Creating virtualenv + installing requirements"
+sudo -u "${RUN_USER}" bash "${PROJECT_DIR}/install_venv.sh"
 
 # 2. Serial port access for the run user.
 echo "==> Adding ${RUN_USER} to the 'dialout' group (serial access)"
@@ -48,7 +43,7 @@ fi
 
 # 4. Render the unit file with the real user + path.
 echo "==> Writing ${UNIT}"
-sed -e "s|@USER@|${RUN_USER}|g" -e "s|@DIR@|${SCRIPT_DIR}|g" \
+sed -e "s|@USER@|${RUN_USER}|g" -e "s|@DIR@|${PROJECT_DIR}|g" \
     "${HERE}/rfnano-bridge.service" > "${UNIT}"
 
 # 5. Enable (but don't start until the env file is filled in).
